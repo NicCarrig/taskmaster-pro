@@ -13,6 +13,8 @@ var createTask = function(taskText, taskDate, taskList) {
   // append span and p element to parent li
   taskLi.append(taskSpan, taskP);
 
+  auditTask(taskLi);
+
 
   // append to ul list on the page
   $("#list-" + taskList).append(taskLi);
@@ -45,6 +47,19 @@ var saveTasks = function() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 };
 
+var auditTask = function(taskEl){
+  var date = $(taskEl).find("span").text().trim();
+  var time =  moment(date, "L").set("hour", 17);
+
+  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
+  if(moment().isAfter(time)){
+    $(taskEl).addClass("list-item-group-danger");
+  }
+  else if(Math.abs(moment().diff(time, "days")) <= 2){
+    $(taskEl).addClass("list-group-item-warning");
+  }
+}
+
 $(".list-group").on("click", "p", function(){
   var text = $(this).text().trim();
   var textInput = $("<textarea>")
@@ -53,6 +68,7 @@ $(".list-group").on("click", "p", function(){
   $(this).replaceWith(textInput);
   textInput.trigger("focus");
 });
+
 $(".list-group").on("blur", "textarea", function(){
   // get the textarea's current value/text
   var text = $(this).val().trim();
@@ -73,23 +89,26 @@ $(".list-group").on("blur", "textarea", function(){
 //due date was clicked
 $(".list-group").on("click", "span", function(){
   //get current text
-  var date = $(this)
-    .text()
-    .trim();
+  var date = $(this).text().trim();
 
   // create new input element
-  var dateInput = $("<input>")
-  .attr("type", "text")
-  .addClass("form-control")
-  .val(date);
+  var dateInput = $("<input>").attr("type", "text").addClass("form-control").val(date);
 
   //swap out elements
   $(this).replaceWith(dateInput);
+
+  dateInput.datepicker({
+    minDate: 1,
+    onClose: function(){
+      //when calender is closed, force a "change" event on the "dateInput"
+      $(this).trigger("change");
+    }
+  });
   //automatically focus on new element
   dateInput.trigger("focus");
 });
 
-$(".list-group").on("blur", "input[type='text']",function(){
+$(".list-group").on("change", "input[type='text']",function(){
   var date = $(this)
     .val()
     .trim();
@@ -107,7 +126,9 @@ $(".list-group").on("blur", "input[type='text']",function(){
     .addClass("badge badge-primary badge-pill")
     .text(date);
   //replace input with taskSpan
-  $(this).replaceWith(taskSpan);
+  $(this).replaceWith(taskSpan);4
+
+  auditTask($(taskSpan).closest(".list-group-item"));
 });
 
 $(".card .list-group").sortable({
@@ -167,6 +188,9 @@ $("#trash").droppable({
   }
 });
 
+$("#modalDueDate").datepicker({
+  minDate: 1
+});
 // modal was triggered
 $("#task-form-modal").on("show.bs.modal", function() {
   // clear values
